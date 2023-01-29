@@ -1,19 +1,58 @@
-version: '3'
+version: '3.8'
 services:
-  influxdb:
-    image: influxdb:latest
+  database:
+    container_name: influx
+    image: influx_image
+    restart: always
     ports:
-      - "8086:8086"
-      - "8091:8091"
-    volumes:
-      - ./influxdb.conf:/etc/influxdb/influxdb.conf
-    command: influxd
-  grafana:
-    image: grafana/grafana
+      - 8086:8086
+    build: 
+      context: .
+      dockerfile: influx/dockerfile
+    networks:
+      default:
+        aliases:
+          - influx
+
+  visualizador:
+    container_name: grafana
+    image: grafana_image
+    restart: always
     ports:
-      - "3000:3000"
+      - 3000:3000  
+    build: 
+      context: .
+      dockerfile: grafana/dockerfile
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=password
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+  broker:
+    container_name: rabbit
+    image: rabbit_image
+    restart: always
+    ports:
+      - 1883:1883
+      - 15672:15672
+      - 5672:5672
+    build: 
+      context: .
+      dockerfile: rabbit/dockerfile
+    networks:
+      default:
+        aliases:
+          - rabbit
+
+
+
+  telegraf:
+    image: telegraf:1.25.0
+    container_name: telegraf
+    restart: always
+    environment:
+      - INFLUX_TOKEN=4lyieVqJF3abP7GNrhiHtGCsbjGzieOyjobESj_GtcQl3TEZx6eQTmwWo5bbGB2RNh4B4crALGG9n5uoOrSI6g==
+    command: --config http://influx:8086/api/v2/telegrafs/0aaaa6f5af017000
     depends_on:
-      - influxdb
+      - database     
+
